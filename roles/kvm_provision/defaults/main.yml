@@ -1,0 +1,13 @@
+---
+# defaults file for kvm_provision
+#
+base_image_name: RHEL-Base-8.6
+libvirt_pool_dir: "/var/lib/libvirt/images"
+base_image_pool_dir: "{{ libvirt_pool_dir }}/BaseImages"
+base_image_sha: 2231df65bc15b148e2c2600582645d958c1ca0d303892635bc50e290b86fdc5b
+vm_name: rhel-8.6-dev
+vm_vcpus: 2
+vm_ram_mb: 4096
+vm_net: default
+vm_root_pass: test123
+ssh_key: /home/ckrell/id_rsa.pub

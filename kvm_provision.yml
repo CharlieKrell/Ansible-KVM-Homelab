@@ -1,0 +1,24 @@
+- name: Deploy VM based on local image
+  hosts: localhost
+  gather_facts: yes
+  become: yes
+  become_user: root
+  vars:
+          pool_dir: "/var/lib/libvirt/images"
+          vm: r86-lab02
+          vcpus: 2
+          ram_mb: 2048
+          net: default
+          ssh_pub_key: "/home/ckrell/.ssh/id_rsa.pub"
+
+  tasks:
+          - name: KVM Provision Rule
+            include_role:
+                    name: kvm_provision
+            vars:
+                    libvirt_pool_dir: "{{ pool_dir }}"
+                    vm_name: "{{ vm }}"
+                    vm_vcpus: "{{ vcpus }}"
+                    vm_ram_mb: "{{ ram_mb }}"
+                    vm_net: "{{ net }}"
+                    ssh_key: "{{ ssh_pub_key }}"

@@ -1,0 +1,63 @@
+---
+# tasks file for kvm_provision
+#
+#
+- name: Ensure requirements in place
+  package:
+          # TODO This is an issue because ansible and ansible-core on RHEL require python39 and there is no python39-libvirt package so you have to install via pip3.9
+          name:
+                  - libguestfs-tools
+                  - python3-libvirt
+          state: present
+
+- name: Get VMs list
+  community.libvirt.virt:
+          command: list_vms
+  register: existing_vms
+  changed_when: no
+
+- name: Create VM if not exists
+  block:
+          - name: Check if base image in BaseImages  directory
+            stat:
+                      path: "{{ base_image_pool_dir }}/{{ base_image_name }}.qcow2"
+            register: image_results
+            failed_when: not image_results.stat.exists 
+          - name: Ensure priveleges allow read access
+            file:
+                    path: "{{ base_image_pool_dir }}/{{ base_image_name }}.qcow2"
+                    mode: o+r
+
+          - name: Copy base image to libvirt directory to create new VM
+            copy:
+                    src: "{{ base_image_pool_dir }}/{{ base_image_name }}.qcow2"
+                    dest: "{{ libvirt_pool_dir }}/{{ vm_name }}.qcow2"
+                    force: no
+                    mode: 0660
+                    owner: qemu
+                    group: qemu
+            register: copy_results
+
+          - name: Configure the image
+            command: |
+                    virt-customize -a {{ libvirt_pool_dir }}/{{ vm_name }}.qcow2 \
+                    --hostname {{ vm_name }} \
+                    --root-password password:{{ vm_root_pass }} \
+                    --ssh-inject 'root:file:{{ ssh_key }}' \
+                    --uninstall cloud-init --selinux-relabel
+            when: image_results.stat.exists
+
+          - name: Define vm
+            community.libvirt.virt:
+                    command: define
+                    xml: "{{ lookup('template', 'vm-template.xml.j2') }}"
+  when: "vm_name not in existing_vms.list_vms"
+
+- name: Ensure VM is started
+  community.libvirt.virt:
+          name: "{{ vm_name }}"
+          state: running
+  register: vm_start_results
+  until: "vm_start_results is success"
+  retries: 30
+  delay: 4 
